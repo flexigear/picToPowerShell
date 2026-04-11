@@ -109,15 +109,19 @@ public class OverlayForm : Form {
     }
 
     protected override void OnMouseUp(MouseEventArgs e) {
+        if (e.Button == MouseButtons.Right) {
+            this.DialogResult = DialogResult.Cancel;
+            this.Close();
+            return;
+        }
         if (isSelecting && e.Button == MouseButtons.Left) {
             isSelecting = false;
             if (currentRect.Width > 5 && currentRect.Height > 5) {
                 ResultBitmap      = screenCapture.Clone(currentRect, screenCapture.PixelFormat);
                 this.DialogResult = DialogResult.OK;
-            } else {
-                this.DialogResult = DialogResult.Cancel;
+                this.Close();
             }
-            this.Close();
+            // Selection too small: ignore, let user try again
         }
     }
 

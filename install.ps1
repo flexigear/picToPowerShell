@@ -3,7 +3,7 @@
 # Usage: Run as admin - powershell -ExecutionPolicy Bypass -File install.ps1
 
 $taskName   = "ScreenCaptureTool"
-$scriptPath = Join-Path $PSScriptRoot "ScreenCapture.ps1"
+$vbsPath    = Join-Path $PSScriptRoot "launch.vbs"
 
 # Remove old task if exists
 if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
@@ -12,8 +12,8 @@ if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
 }
 
 $action  = New-ScheduledTaskAction `
-    -Execute "powershell.exe" `
-    -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`""
+    -Execute "wscript.exe" `
+    -Argument "`"$vbsPath`""
 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
