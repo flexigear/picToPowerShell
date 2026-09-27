@@ -83,11 +83,16 @@ auto-start at logon. **launch.vbs** starts PowerShell hidden so no console windo
 **settings.txt** — Generated at runtime, holds the chosen save folder. Git-ignored; delete it to reset.
 
 **setup-nas.ps1** / **NAS-SETUP.md** — Connect a machine to the NAS and point the screenshot tool at
-the shared folder `\\flexigearnas\home\appProjects\picToPowerShellServer\pics`. Read NAS-SETUP.md
-before touching anything NAS-related; the two traps it documents are that paths must use the host
-**name** (the `100.104.226.105` Tailscale IP is unreachable from the LAN machine) and that Windows
-stores SMB credentials **per server name as typed**, so a credential saved for the IP does nothing for
-the name. `D:\NasWorkSpace` is a directory symlink to a UNC path, not a mapped drive.
+the shared folder `\\flexigearnas\home\myWorkSpace\appProjects\picToPowerShellServer\pics`. Read
+NAS-SETUP.md before touching anything NAS-related. Its traps, all three found the hard way: paths must
+use the host **name** (the `100.104.226.105` Tailscale IP is unreachable from the LAN machine);
+Windows stores SMB credentials **per server name as typed**, so a credential saved for the IP does
+nothing for the name; and the NAS user name is **case sensitive** while the Windows credential dialog
+lower-cases it. `D:\NasWorkSpace` is a directory symlink to a UNC path, not a mapped drive.
+
+The pics folder must stay under **`myWorkSpace\appProjects`**: that is the directory the Debian VM has
+NFS-mounted at `/mnt/projects`, so a folder anywhere else on the share is invisible from there. Claude
+on Debian translates pasted Windows paths using a rule kept in `~/.claude/CLAUDE.md` on that machine.
 
 ## Commands
 

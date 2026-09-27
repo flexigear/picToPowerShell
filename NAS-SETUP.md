@@ -82,6 +82,38 @@ cmdkey /add:flexigearnas /user:Flexigear /pass
 Useful switches: `-LinkPath` (if the machine has no `D:`), `-SkipLink`,
 `-SkipScreenshotConfig`, `-RestartTool`.
 
+## The Debian VM
+
+`debian-dev` (Tailscale `100.93.156.85`, LAN `192.168.68.6`, user `flexigear`) already
+has the same storage mounted over **NFS**, straight from `/etc/fstab`:
+
+| NFS export | Mounted at |
+|---|---|
+| `192.168.68.2:/volume1/homes/Flexigear/myWorkSpace/appProjects` | `/mnt/projects` |
+| `192.168.68.2:/volume1/homes/Flexigear/Downloads` | `/mnt/downloads` |
+
+So one set of files is reachable three ways, and a screenshot path pasted from
+Windows into Claude on Debian just needs its prefix swapped:
+
+```
+\\flexigearnas\home\myWorkSpace\appProjects\<rest>   ->  /mnt/projects/<rest>
+D:\NasWorkSpace\appProjects\<rest>                   ->  /mnt/projects/<rest>
+```
+
+That rule lives in **`~/.claude/CLAUDE.md` on the Debian VM**, so it applies to every
+Claude session there, not just this project. Nothing has to be copied or re-uploaded:
+Claude translates the path and reads the file off the NFS mount.
+
+This is also why the pics folder must sit under **`myWorkSpace\appProjects`**. That is
+the only `appProjects` the VM has mounted; a folder at the share root would be
+invisible from Debian.
+
+`192.168.68.2` is the NAS on the LAN — the same machine the Windows side calls
+`flexigearnas`, where the SMB share `home` is `/volume1/homes/Flexigear`.
+
+SSH from Windows uses a key in `%USERPROFILE%\.ssh\id_ed25519`. From the LAN machine,
+`100.93.156.85` is unreachable; use `debian-dev` or `192.168.68.6`.
+
 ## Shared screenshots
 
 Both machines save into the same folder, so numbering (`000001.png`, `000002.png`, …)

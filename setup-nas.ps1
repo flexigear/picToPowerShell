@@ -27,7 +27,9 @@ param(
     [string] $User             = 'Flexigear',
     [string] $LinkPath         = 'D:\NasWorkSpace',
     [string] $WorkspaceSubPath = 'myWorkSpace',
-    [string] $PicsSubPath      = 'appProjects\picToPowerShellServer\pics',
+    # Under myWorkSpace, because that is the appProjects the Debian VM has NFS-mounted
+    # at /mnt/projects. A pics folder anywhere else would be invisible from there.
+    [string] $PicsSubPath      = 'myWorkSpace\appProjects\picToPowerShellServer\pics',
     [switch] $SkipLink,
     [switch] $SkipScreenshotConfig,
     [switch] $RestartTool,
