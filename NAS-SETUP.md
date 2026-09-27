@@ -116,11 +116,21 @@ SSH from Windows uses a key in `%USERPROFILE%\.ssh\id_ed25519`. From the LAN mac
 
 ## Shared screenshots
 
-Both machines save into the same folder, so numbering (`000001.png`, `000002.png`, …)
-is shared and continues across machines — `Naming.NextPath` scans the folder each
-time. Two machines saving in the same instant could pick the same number and one
-would overwrite the other; in practice captures are seconds apart, and the fix if it
-ever matters is a per-machine prefix.
+Both machines save into the same folder, so file names carry a **machine id in the
+first digit** and each machine counts only its own files:
+
+| Machine | `MachineId` | Writes |
+|---|---|---|
+| Tailscale desktop (`DESKTOP-VKRKAUN`) | 1 | `100001.png`, `100002.png`, … |
+| LAN machine | 2 | `200001.png`, `200002.png`, … |
+
+Set it with `setup-nas.ps1 -MachineId 2` on the second machine; it lands in
+`settings.txt`. Without this, both machines would scan the same folder, reach the
+same "next" number and one would silently overwrite the other's screenshot — and
+each machine would also keep jumping forward to the other's count.
+
+Files written before machine ids existed start with `0` and are ignored by both
+machines. They stay readable; nothing renames them.
 
 The tool reads `settings.txt` only at startup, so restart it after changing folders.
 

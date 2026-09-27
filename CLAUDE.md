@@ -19,10 +19,15 @@ and defaults to `screenshots\` next to the script.
 **ScreenCapture.ps1** — Single file, embeds C# via `Add-Type`. Types:
 
 - `Naming` — static, single source of truth for the file-naming rule. `TryIndex` defines what counts as
-  a tool-generated file: a basename of **exactly six digits**. `NextPath(dir)` returns `dir\NNNNNN.png`
-  for one past the highest such file; `GeneratedFiles(dir)` lists them for the clear command. Sharing
-  `TryIndex` between the two is what guarantees clearing really does reset numbering to 000001.
-  Numbering is **per folder**, so switching the save folder restarts from that folder's own highest number.
+  a tool-generated file: a basename of **exactly six digits**. `GeneratedFiles(dir)` lists them for the
+  clear command.
+  `NextPath(dir, machineId)` splits that name: **first digit = machine, last five = that machine's own
+  counter**, so machine 1 writes `100001, 100002, …` and machine 2 writes `200001, …`. It only looks at
+  files in its own range. Counting across machines would be wrong twice over: this machine would jump to
+  the other's count, and two machines saving in the same second would choose the same name and one would
+  silently overwrite the other. Numbering is also **per folder**, so switching folders restarts from that
+  folder's own highest number for this machine. Files written before machine ids existed start with `0`
+  and are simply ignored by every machine.
 - `AppSettings` — loads/stores `settings.txt` (plain `key=value`) next to the script. Holds `SaveDir`
   and owns the folder picker. A missing, locked, or malformed file silently falls back to the default —
   settings are never allowed to crash startup. `IsUsablePath` rejects relative and drive-relative paths
@@ -120,7 +125,11 @@ schtasks /run /tn ScreenCaptureTool
 - Save folder: tray menu "Save folder..." / "Open save folder", or the "Save to:" link in the editor
   status bar. Changing it from the editor affects that editor's next Save too, not just later captures.
   A folder that does not exist yet is created on first save.
-- Tray "Clear save folder..." empties the folder and resets numbering. It is deliberately conservative,
+- `MachineId` in `settings.txt` (1-9, default 1) is the first digit of every file this machine writes.
+  Machines sharing a save folder must each get their own: 1 is the Tailscale desktop, 2 the LAN machine.
+  `setup-nas.ps1 -MachineId 2` sets it. The editor's status bar shows which machine it is running as.
+- Tray "Clear save folder..." empties the folder and resets numbering to `<id>00001`. It removes every
+  machine's screenshots, not just this one's, since the folder is shared. It is deliberately conservative,
   because the save folder may be one the user keeps other images in: only `NNNNNN.png` files are removed
   (`holiday.png`, `12.png`, `000001 (1).png`, subfolders and non-PNGs all survive), files go to the
   **Recycle Bin** rather than being deleted outright, and the confirmation dialog defaults to No.

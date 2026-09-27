@@ -49,12 +49,20 @@ public static class Naming {
         return list;
     }
 
-    public static string NextPath(string dir) {
-        int max = 0;
+    // The save folder can be shared by several machines over the network, so the
+    // first digit identifies the machine and the remaining five are its own counter:
+    // machine 1 writes 100001, 100002, ... and machine 2 writes 200001, 200002, ...
+    // Counting is per machine on purpose. Taking the highest number in the folder
+    // regardless of machine would make this machine jump to the other one's count,
+    // and two machines saving in the same second would land on the same name.
+    public static string NextPath(string dir, int machineId) {
+        int first = machineId * 100000;
+        int last  = first + 99999;
+        int max   = first;
         if (Directory.Exists(dir)) {
             foreach (string file in Directory.GetFiles(dir, "*.png")) {
                 int num;
-                if (TryIndex(file, out num) && num > max) max = num;
+                if (TryIndex(file, out num) && num >= first && num <= last && num > max) max = num;
             }
         }
         return Path.Combine(dir, (max + 1).ToString("D6") + ".png");
@@ -67,14 +75,19 @@ public static class Naming {
 // file simply falls back to the default folder - never fatal.
 // ------------------------------------------------------------------
 public class AppSettings {
+    public const int MIN_MACHINE = 1;
+    public const int MAX_MACHINE = 9;
+
     private string filePath;
     private string defaultDir;
     public  string SaveDir;
+    public  int    MachineId;   // first digit of every file name this machine writes
 
     public AppSettings(string scriptDir) {
         filePath   = Path.Combine(scriptDir, "settings.txt");
         defaultDir = Path.Combine(scriptDir, "screenshots");
         SaveDir    = defaultDir;
+        MachineId  = MIN_MACHINE;
         Load();
     }
 
@@ -93,6 +106,10 @@ public class AppSettings {
                 string val = line.Substring(eq + 1).Trim();
                 if (string.Equals(key, "SaveDir", StringComparison.OrdinalIgnoreCase) && IsUsablePath(val))
                     SaveDir = Path.GetFullPath(val);
+                if (string.Equals(key, "MachineId", StringComparison.OrdinalIgnoreCase)) {
+                    int id;
+                    if (int.TryParse(val, out id) && id >= MIN_MACHINE && id <= MAX_MACHINE) MachineId = id;
+                }
             }
         } catch {
             SaveDir = defaultDir;
@@ -121,7 +138,9 @@ public class AppSettings {
         try {
             File.WriteAllText(filePath,
                 "# ScreenCapture settings. Delete this file to restore defaults." + Environment.NewLine +
-                "SaveDir=" + SaveDir + Environment.NewLine);
+                "SaveDir=" + SaveDir + Environment.NewLine +
+                "# First digit of every file name, so machines sharing SaveDir cannot collide." + Environment.NewLine +
+                "MachineId=" + MachineId + Environment.NewLine);
             return true;
         } catch {
             return false;
@@ -851,7 +870,8 @@ public class EditorForm : Form {
         if (widthLabel != null) widthLabel.Text = "Size " + (int)inkWidth;
         if (statusLabel != null)
             statusLabel.Text = image.Width + " x " + image.Height + " px    -    " +
-                               items.Count + " markup item(s)";
+                               items.Count + " markup item(s)    -    " +
+                               "machine " + settings.MachineId;
         if (folderLink != null) {
             folderLink.Text        = "Save to: " + Shorten(settings.SaveDir, 64);
             folderLink.ToolTipText = settings.SaveDir + Environment.NewLine +
@@ -1352,7 +1372,7 @@ public class EditorForm : Form {
         CommitText();
         try {
             if (!Directory.Exists(settings.SaveDir)) Directory.CreateDirectory(settings.SaveDir);
-            string path = Naming.NextPath(settings.SaveDir);
+            string path = Naming.NextPath(settings.SaveDir, settings.MachineId);
             using (Bitmap flat = Flatten()) flat.Save(path, ImageFormat.Png);
             SavedPath = path;
             return true;
@@ -1498,7 +1518,8 @@ public class HotkeyForm : Form {
             "Move " + files.Count + " screenshot(s) to the Recycle Bin?" + nl + nl +
             settings.SaveDir + nl + nl +
             "Only files named NNNNNN.png are removed - anything else in the folder is left alone." + nl +
-            "Numbering restarts at 000001.",
+            "This includes screenshots taken on other machines if the folder is shared." + nl +
+            "Numbering restarts at " + settings.MachineId + "00001.",
             "Clear save folder", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
         if (answer != DialogResult.Yes) return;
@@ -1523,7 +1544,8 @@ public class HotkeyForm : Form {
                 "Clear save folder", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         } else {
             trayIcon.ShowBalloonTip(2500, "Save folder cleared",
-                removed + " file(s) moved to the Recycle Bin. Next capture will be 000001.png.",
+                removed + " file(s) moved to the Recycle Bin. Next capture will be " +
+                settings.MachineId + "00001.png.",
                 ToolTipIcon.Info);
         }
     }
@@ -1674,6 +1696,7 @@ $settings  = New-Object AppSettings($scriptDir)
 
 Write-Host "[ScreenCapture] Started. Press Ctrl+Alt+S to capture."
 Write-Host "[ScreenCapture] Save dir: $($settings.SaveDir)"
+Write-Host "[ScreenCapture] Machine id: $($settings.MachineId) (files are $($settings.MachineId)XXXXX.png)"
 Write-Host "[ScreenCapture] Settings: $($settings.FilePath)"
 Write-Host "[ScreenCapture] Right-click tray icon to change the folder or exit."
 

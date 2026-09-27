@@ -25,6 +25,9 @@ param(
     [string] $NasIp            = '',                 # LAN IP, only if the name does not resolve
     [string] $Share            = 'home',
     [string] $User             = 'Flexigear',
+    [ValidateRange(1, 9)]
+    [int]    $MachineId        = 1,      # 1 = the Tailscale desktop, 2 = the LAN machine
+
     [string] $LinkPath         = 'D:\NasWorkSpace',
     [string] $WorkspaceSubPath = 'myWorkSpace',
     # Under myWorkSpace, because that is the appProjects the Debian VM has NFS-mounted
@@ -185,9 +188,12 @@ if ($SkipScreenshotConfig) {
         }
         Set-Content -Path $settingsFile -Encoding ASCII -Value @(
             '# ScreenCapture settings. Delete this file to restore defaults.',
-            "SaveDir=$picsPath"
+            "SaveDir=$picsPath",
+            '# First digit of every file name, so machines sharing SaveDir cannot collide.',
+            "MachineId=$MachineId"
         )
         Ok "settings.txt -> SaveDir=$picsPath"
+        Ok "settings.txt -> MachineId=$MachineId  (files are ${MachineId}XXXXX.png)"
 
         if ($canReach) {
             $probe = Join-Path $picsPath ('_writetest_' + [guid]::NewGuid().ToString('N') + '.tmp')
