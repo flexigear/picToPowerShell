@@ -82,6 +82,13 @@ auto-start at logon. **launch.vbs** starts PowerShell hidden so no console windo
 
 **settings.txt** — Generated at runtime, holds the chosen save folder. Git-ignored; delete it to reset.
 
+**setup-nas.ps1** / **NAS-SETUP.md** — Connect a machine to the NAS and point the screenshot tool at
+the shared folder `\\flexigearnas\home\appProjects\picToPowerShellServer\pics`. Read NAS-SETUP.md
+before touching anything NAS-related; the two traps it documents are that paths must use the host
+**name** (the `100.104.226.105` Tailscale IP is unreachable from the LAN machine) and that Windows
+stores SMB credentials **per server name as typed**, so a credential saved for the IP does nothing for
+the name. `D:\NasWorkSpace` is a directory symlink to a UNC path, not a mapped drive.
+
 ## Commands
 
 ```powershell
