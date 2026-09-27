@@ -109,10 +109,19 @@ if ($canReach) {
         Say  "         cmdkey /add:$NasHost /user:$User /pass"
     }
     if ($cred) {
+        # The Windows credential dialog hands back a lower-cased user name. The NAS
+        # runs Linux, where user names are case sensitive, so "flexigear" is rejected
+        # where "Flexigear" works. Keep the spelling that was asked for when the only
+        # difference is case.
+        $userName = $cred.UserName
+        if ($userName -ne $User -and $userName -ieq $User) {
+            Say "  using '$User' rather than '$userName' - the NAS is case sensitive"
+            $userName = $User
+        }
         $plain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
             [Runtime.InteropServices.Marshal]::SecureStringToBSTR($cred.Password))
         try {
-            cmd /c "cmdkey /add:$NasHost /user:$($cred.UserName) /pass:$plain" | Out-Null
+            cmd /c "cmdkey /add:$NasHost /user:$userName /pass:$plain" | Out-Null
         } finally {
             $plain = $null
             [GC]::Collect()

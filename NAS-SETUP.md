@@ -54,6 +54,20 @@ cmdkey /add:flexigearnas /user:Flexigear /pass    # prompts, nothing echoed
 `setup-nas.ps1` does this for you when it finds the share unreachable. Check what is
 stored with `cmdkey /list | findstr flexigearnas`.
 
+### The user name is case sensitive
+
+The NAS runs Linux, so `Flexigear` and `flexigear` are different accounts — and the
+Windows credential dialog hands back the name **lower-cased**, which is rejected.
+That is worth knowing because the failure looks identical to a wrong password:
+"The user name or password is incorrect."
+
+`setup-nas.ps1` keeps the spelling from `-User` when the dialog's answer differs only
+by case. If you store the credential by hand, type the name exactly:
+
+```powershell
+cmdkey /add:flexigearnas /user:Flexigear /pass
+```
+
 ## What setup-nas.ps1 does
 
 1. Resolves `flexigearnas`; with `-NasIp` it adds a `hosts` entry when DNS cannot.
