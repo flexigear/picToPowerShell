@@ -66,17 +66,35 @@ Step "1. Resolving $NasHost"
 $resolved = $null
 try { $resolved = ([Net.Dns]::GetHostAddresses($NasHost) | ForEach-Object { $_.IPAddressToString }) -join ', ' } catch { }
 
-if ($resolved) {
+if ($resolved -and -not $NasIp) {
     Ok "resolves to $resolved"
 } elseif ($NasIp) {
+    # -NasIp always wins, even when the name already resolves. On a machine that runs
+    # Tailscale, MagicDNS answers with the tailnet address, which would send SMB down
+    # the tunnel instead of across the LAN the NAS is actually sitting on - and would
+    # break entirely if Tailscale were switched off.
     if (-not (Test-Admin)) {
         Warn "cannot add a hosts entry without an elevated shell - re-run as administrator, or fix DNS"
     } else {
         $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
         $line  = "$NasIp`t$NasHost"
-        $have  = Select-String -Path $hosts -Pattern "\s$([regex]::Escape($NasHost))\s*$" -ErrorAction SilentlyContinue
-        if ($have) {
-            Ok "hosts already maps $NasHost"
+        $have  = @(Select-String -Path $hosts -Pattern "\s$([regex]::Escape($NasHost))\s*$" -ErrorAction SilentlyContinue)
+        $match = @($have | Where-Object { $_.Line -match "^\s*$([regex]::Escape($NasIp))\s" })
+        if ($match.Count -gt 0) {
+            Ok "hosts already maps $NasHost -> $NasIp"
+        } elseif (@($have | Where-Object { $_.Line -match '\.ts\.net' }).Count -gt 0) {
+            # Tailscale's MagicDNS maintains its own hosts entries and rewrites them,
+            # so editing that line is a fight we would lose. The name still resolves -
+            # just over the tailnet rather than the LAN.
+            Warn "$NasHost is mapped by Tailscale's MagicDNS to the tailnet address; leaving hosts alone"
+            Say  "         SMB will go over Tailscale instead of the LAN, which works but"
+            Say  "         stops working if Tailscale is switched off on this machine."
+        } elseif ($have.Count -gt 0) {
+            # An entry exists but points somewhere else; correct it rather than adding
+            # a second line, since the first match would win.
+            $kept = Get-Content $hosts | Where-Object { $_ -notmatch "\s$([regex]::Escape($NasHost))\s*$" }
+            Set-Content -Path $hosts -Value ($kept + $line)
+            Ok "replaced stale hosts entry -> $line"
         } else {
             Add-Content -Path $hosts -Value $line
             Ok "added to hosts: $line"
